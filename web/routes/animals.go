@@ -14,6 +14,9 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 	type indexPage struct {
 		Animals []animals.Animal
 	}
+	type animalPage struct {
+		Animal animals.Animal
+	}
 	type newAnimal struct {
 		AnimalTypes []animals.AnimalType
 	}
@@ -24,15 +27,45 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 	}
 
 	indexTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/index.html"))
+	animalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/show.html"))
 	newAnimalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/new.html"))
 
 	http.HandleFunc("GET /animals", func(w http.ResponseWriter, r *http.Request) {
-		anmls, err := animals.GetAll(db, animalTypes)
+		anmls, err := animals.GetAll(db)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
 		}
+		if err := animals.FillTypeForAnimals(anmls, animalTypes); err != nil {
+			http.Error(w, "Oops", http.StatusInternalServerError)
+			return
+		}
 		indexTmpl.Execute(w, indexPage{Animals: anmls})
+	})
+
+	http.HandleFunc("GET /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
+		if err != nil {
+			Serve404(w, r)
+			return
+		}
+
+		anml, err := animals.Get(int(id), db)
+		if err != nil {
+			http.Error(w, "Oops", http.StatusInternalServerError)
+			return
+		}
+
+		if anml == nil {
+			Serve404(w, r)
+			return
+		}
+
+		if err := animals.FillTypeForAnimal(anml, animalTypes); err != nil {
+			http.Error(w, "Oops", http.StatusInternalServerError)
+			return
+		}
+		animalTmpl.Execute(w, animalPage{Animal: *anml})
 	})
 
 	http.HandleFunc("GET /animals/new", func(w http.ResponseWriter, r *http.Request) {

@@ -5,7 +5,7 @@
     {{with .Animals}}
     <ul>
         {{range .}}
-        <li>{{.}}</li>
+        <li><a href="/animals/{{.ID}}">{{.}}</a></li>
         {{end}}
     </ul>
     {{else}}

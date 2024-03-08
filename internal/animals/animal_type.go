@@ -1,10 +1,41 @@
 package animals
 
-import "database/sql"
+import (
+	"database/sql"
+	"fmt"
+	"slices"
+)
 
 type AnimalType struct {
 	ID   int
 	Name string
+}
+
+func FillTypeForAnimals(anmls []Animal, aTypes []AnimalType) error {
+	fmt.Println(anmls[0])
+	for i := 0; i < len(anmls); i++ {
+		anml := &anmls[i]
+		if err := FillTypeForAnimal(anml, aTypes); err != nil {
+			return err
+		}
+	}
+	fmt.Println(anmls[0])
+
+	return nil
+}
+
+func FillTypeForAnimal(anml *Animal, aTypes []AnimalType) error {
+	typeIndex := slices.IndexFunc(aTypes, func(aType AnimalType) bool {
+		return aType.ID == anml.AnimalType.ID
+	})
+
+	if typeIndex == -1 {
+		return fmt.Errorf("animal_type invalid")
+	}
+
+	anml.AnimalType.Name = aTypes[typeIndex].Name
+
+	return nil
 }
 
 func GetAnimalTypes(db *sql.DB) ([]AnimalType, error) {

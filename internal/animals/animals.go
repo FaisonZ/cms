@@ -3,7 +3,6 @@ package animals
 import (
 	"database/sql"
 	"fmt"
-	"slices"
 	"strings"
 )
 
@@ -13,7 +12,34 @@ type Animal struct {
 	Name       string
 }
 
-func GetAll(db *sql.DB, aTypes []AnimalType) ([]Animal, error) {
+func Get(id int, db *sql.DB) (*Animal, error) {
+	if id < 1 {
+		return nil, fmt.Errorf("id invalid")
+	}
+
+	rows, err := db.Query("SELECT id, type_id, name FROM animals WHERE id=?", id)
+	if err != nil {
+		return nil, err
+	}
+
+	if !rows.Next() {
+		return nil, nil
+	}
+
+	var anml Animal
+
+	if err := rows.Scan(&anml.ID, &anml.AnimalType.ID, &anml.Name); err != nil {
+		return nil, err
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &anml, nil
+}
+
+func GetAll(db *sql.DB) ([]Animal, error) {
 	rows, err := db.Query("SELECT id, type_id, name FROM animals")
 	if err != nil {
 		return nil, err
@@ -29,15 +55,6 @@ func GetAll(db *sql.DB, aTypes []AnimalType) ([]Animal, error) {
 			return nil, err
 		}
 
-		typeIndex := slices.IndexFunc(aTypes, func(aType AnimalType) bool {
-			return aType.ID == anml.AnimalType.ID
-		})
-
-		if typeIndex == -1 {
-			return nil, fmt.Errorf("animal_type invalid")
-		}
-
-		anml.AnimalType.Name = aTypes[typeIndex].Name
 		anmls = append(anmls, anml)
 	}
 
