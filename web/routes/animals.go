@@ -11,7 +11,7 @@ import (
 	"faisonz.net/cms/internal/animals"
 )
 
-func RegisterAnimalRoutes(db *sql.DB) error {
+func RegisterAnimalRoutes(mux *http.ServeMux, db *sql.DB) error {
 	type indexPage struct {
 		Animals []animals.Animal
 	}
@@ -36,7 +36,7 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 	editAnimalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/edit.html"))
 	newAnimalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/new.html"))
 
-	http.HandleFunc("GET /animals", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /animals", func(w http.ResponseWriter, r *http.Request) {
 		anmls, err := animals.GetAll(db)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
@@ -49,7 +49,7 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 		indexTmpl.Execute(w, indexPage{Animals: anmls})
 	})
 
-	http.HandleFunc("GET /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
 			Serve404(w, r)
@@ -74,7 +74,7 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 		animalTmpl.Execute(w, animalPage{Animal: *anml})
 	})
 
-	http.HandleFunc("GET /animals/{id}/edit", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /animals/{id}/edit", func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
 			Serve404(w, r)
@@ -99,7 +99,7 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 		editAnimalTmpl.Execute(w, editAnimalPage{Animal: *anml, AnimalTypes: animalTypes})
 	})
 
-	http.HandleFunc("POST /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
 			Serve404(w, r)
@@ -127,11 +127,11 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 		http.Redirect(w, r, fmt.Sprintf("/animals/%d", anml.ID), http.StatusSeeOther)
 	})
 
-	http.HandleFunc("GET /animals/new", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /animals/new", func(w http.ResponseWriter, r *http.Request) {
 		newAnimalTmpl.Execute(w, newAnimal{AnimalTypes: animalTypes})
 	})
 
-	http.HandleFunc("POST /animals", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /animals", func(w http.ResponseWriter, r *http.Request) {
 		aTypeID, err := strconv.ParseInt(r.FormValue("animalType"), 10, 0)
 		if err != nil {
 			http.Error(w, "Invalid type id", http.StatusBadRequest)
