@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>{{block "title" .}}CowMS{{end}}</title>
+    <link href="/static/styles/main.css" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1><a href="/">🐮MS</a></h1>
+        <nav>
+            <a href="/animals">Animals</a>
+            <a href="/animals/new">New Animals</a>
+        </nav>
+    </header>
+    <main>
+        {{block "main" .}}The main stuff{{end}}
+    </main>
+</body>
+</html>
