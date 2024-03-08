@@ -20,7 +20,11 @@ func SetupDatabase() error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() {
+		if closeError := db.Close(); closeError != nil {
+			fmt.Println("Error closing database", closeError)
+		}
+	}()
 
 	tables, err := getMissingTables(db)
 	if err != nil {
