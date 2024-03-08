@@ -35,6 +35,8 @@ func SetupDatabase() error {
 		return err
 	}
 
+	println("Database created!")
+
 	return nil
 }
 

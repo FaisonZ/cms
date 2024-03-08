@@ -11,7 +11,6 @@ import (
 
 func loadDB() (*sql.DB, error) {
 	db_source := os.Getenv("DB")
-	fmt.Println(db_source)
 
 	switch db_source {
 	case "local":
