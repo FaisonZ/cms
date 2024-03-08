@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"faisonz.net/cms/internal/animals"
 	"github.com/joho/godotenv"
 )
 
@@ -35,7 +36,11 @@ func SetupDatabase() error {
 		return err
 	}
 
-	println("Database created!")
+	if err := insertDefaultData(tables, db); err != nil {
+		return err
+	}
+
+	fmt.Println("Database created!")
 
 	return nil
 }
@@ -103,6 +108,48 @@ func createTables(tNames []string, db *sql.DB) error {
 		}
 
 		fmt.Println("Created table:", tName)
+	}
+
+	return nil
+}
+
+func insertDefaultData(tNames []string, db *sql.DB) error {
+	for _, tName := range tNames {
+		switch tName {
+		case "animal_types":
+			if err := insertAnimalTypes(db); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func insertAnimalTypes(db *sql.DB) error {
+	animalTypes := []animals.AnimalType{
+		{ID: 1, Name: "Cow"},
+		{ID: 2, Name: "Chicken"},
+	}
+
+	insertStmt := "INSERT INTO animal_types (id, name) VALUES\n" +
+		"(?, ?)" + strings.Repeat(",\n(?, ?)", len(animalTypes)-1)
+
+	args := make([]any, len(animalTypes)*2)
+	for i, aType := range animalTypes {
+		args[2*i] = aType.ID
+		args[2*i+1] = aType.Name
+	}
+
+	result, err := db.Exec(insertStmt, args...)
+	if err != nil {
+		return err
+	}
+
+	if num, err := result.RowsAffected(); err != nil {
+		fmt.Println("Can't get rows affected")
+	} else {
+		fmt.Println("Animal Types inserted:", num)
 	}
 
 	return nil
