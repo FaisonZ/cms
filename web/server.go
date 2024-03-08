@@ -35,7 +35,7 @@ func StartServer() {
 		file := r.PathValue("file")
 
 		if !strings.HasSuffix(file, ".css") {
-			serve404(w, r)
+			Serve404(w, r)
 			return
 		}
 
@@ -44,7 +44,7 @@ func StartServer() {
 		_, err := os.Stat(fp)
 		if err != nil {
 			fmt.Println(err)
-			serve404(w, r)
+			Serve404(w, r)
 			return
 		}
 
@@ -54,7 +54,7 @@ func StartServer() {
 	routes.RegisterAnimalRoutes(db)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		serve404(w, r)
+		Serve404(w, r)
 	})
 
 	log.Println("Server started on port 3000")
@@ -62,7 +62,7 @@ func StartServer() {
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
 
-func serve404(w http.ResponseWriter, r *http.Request) {
+func Serve404(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/errors/404.html"))
 	w.WriteHeader(404)
 	tmpl.Execute(w, nil)
