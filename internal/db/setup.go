@@ -17,7 +17,7 @@ func SetupDatabase() error {
 		log.Fatal("godotenv.Load(): ", err)
 	}
 
-	db, err := loadDB()
+	db, err := LoadDB()
 	if err != nil {
 		return err
 	}

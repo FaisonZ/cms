@@ -9,7 +9,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func loadDB() (*sql.DB, error) {
+func LoadDB() (*sql.DB, error) {
 	db_source := os.Getenv("DB")
 
 	switch db_source {

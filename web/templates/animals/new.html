@@ -2,6 +2,15 @@
 
 {{define "main"}}
 <form action="/animals" method="POST">
+    <select name="animalType">
+        <option value=""></option>
+        {{range .AnimalTypes}}
+            <option value="{{.ID}}">{{.Name}}</option>
+        {{end}}
+    </select>
 
+    <input name="total" type="number" min="1" max="20">
+
+    <button type="submit">Add Animals</button>
 </form>
 {{end}}
