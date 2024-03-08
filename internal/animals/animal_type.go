@@ -12,14 +12,12 @@ type AnimalType struct {
 }
 
 func FillTypeForAnimals(anmls []Animal, aTypes []AnimalType) error {
-	fmt.Println(anmls[0])
 	for i := 0; i < len(anmls); i++ {
 		anml := &anmls[i]
 		if err := FillTypeForAnimal(anml, aTypes); err != nil {
 			return err
 		}
 	}
-	fmt.Println(anmls[0])
 
 	return nil
 }

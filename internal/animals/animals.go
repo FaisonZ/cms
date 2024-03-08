@@ -21,6 +21,7 @@ func Get(id int, db *sql.DB) (*Animal, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	if !rows.Next() {
 		return nil, nil
@@ -63,6 +64,27 @@ func GetAll(db *sql.DB) ([]Animal, error) {
 	}
 
 	return anmls, nil
+}
+
+func Update(animal Animal, db *sql.DB) error {
+	if animal.ID < 1 {
+		return fmt.Errorf("id invalid")
+	}
+
+	updateStmt := "Update animals\n" +
+		"SET name=?\n" +
+		"WHERE id=?"
+
+	result, err := db.Exec(updateStmt, animal.Name, animal.ID)
+	if err != nil {
+		return err
+	}
+
+	if num, err := result.RowsAffected(); err == nil && num != 1 {
+		return fmt.Errorf("animal not updated")
+	}
+
+	return nil
 }
 
 func SaveMany(animal Animal, total int, db *sql.DB) error {

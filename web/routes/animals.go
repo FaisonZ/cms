@@ -2,6 +2,7 @@ package routes
 
 import (
 	"database/sql"
+	"fmt"
 	"html/template"
 	"net/http"
 	"slices"
@@ -17,6 +18,10 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 	type animalPage struct {
 		Animal animals.Animal
 	}
+	type editAnimalPage struct {
+		Animal      animals.Animal
+		AnimalTypes []animals.AnimalType
+	}
 	type newAnimal struct {
 		AnimalTypes []animals.AnimalType
 	}
@@ -28,6 +33,7 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 
 	indexTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/index.html"))
 	animalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/show.html"))
+	editAnimalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/edit.html"))
 	newAnimalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/new.html"))
 
 	http.HandleFunc("GET /animals", func(w http.ResponseWriter, r *http.Request) {
@@ -66,6 +72,59 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 			return
 		}
 		animalTmpl.Execute(w, animalPage{Animal: *anml})
+	})
+
+	http.HandleFunc("GET /animals/{id}/edit", func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
+		if err != nil {
+			Serve404(w, r)
+			return
+		}
+
+		anml, err := animals.Get(int(id), db)
+		if err != nil {
+			http.Error(w, "Oops", http.StatusInternalServerError)
+			return
+		}
+
+		if anml == nil {
+			Serve404(w, r)
+			return
+		}
+
+		if err := animals.FillTypeForAnimal(anml, animalTypes); err != nil {
+			http.Error(w, "Oops", http.StatusInternalServerError)
+			return
+		}
+		editAnimalTmpl.Execute(w, editAnimalPage{Animal: *anml, AnimalTypes: animalTypes})
+	})
+
+	http.HandleFunc("POST /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
+		if err != nil {
+			Serve404(w, r)
+			return
+		}
+
+		anml, err := animals.Get(int(id), db)
+		if err != nil {
+			http.Error(w, "Oops", http.StatusInternalServerError)
+			return
+		}
+
+		if anml == nil {
+			Serve404(w, r)
+			return
+		}
+
+		anml.Name = r.FormValue("name")
+
+		if err := animals.Update(*anml, db); err != nil {
+			http.Error(w, "Oops", http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, fmt.Sprintf("/animals/%d", anml.ID), http.StatusSeeOther)
 	})
 
 	http.HandleFunc("GET /animals/new", func(w http.ResponseWriter, r *http.Request) {

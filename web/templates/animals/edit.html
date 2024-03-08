@@ -1,0 +1,12 @@
+{{define "title"}}🐮MS: Edit Animal{{end}}
+
+{{define "main"}}
+<h2>Editing: {{.Animal}}</h2>
+
+<form action="/animals/{{.Animal.ID}}" method="POST">
+    <input name="name" type="text" value="{{.Animal.Name}}" required>
+    <br>
+    <br>
+    <button type="submit">Save</button>
+</form>
+{{end}}
