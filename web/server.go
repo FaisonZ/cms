@@ -18,7 +18,7 @@ func StartServer() {
 		log.Fatal("godotenv.Load(): ", err)
 	}
 
-	tmpl := template.Must(template.ParseFiles("templates/layout.html"))
+	tmpl := template.Must(template.ParseFiles("web/templates/layout.html"))
 
 	http.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		tmpl.Execute(w, nil)
@@ -33,7 +33,7 @@ func StartServer() {
 		}
 
 		fp := filepath.Join("static", "styles", file)
-
+		fmt.Println(fp)
 		_, err := os.Stat(fp)
 		if err != nil {
 			fmt.Println(err)
@@ -44,7 +44,7 @@ func StartServer() {
 		http.ServeFile(w, r, fp)
 	})
 
-	newAnimalTmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/animals/new.html"))
+	newAnimalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/new.html"))
 	http.HandleFunc("GET /animals/new", func(w http.ResponseWriter, r *http.Request) {
 		newAnimalTmpl.Execute(w, nil)
 	})
