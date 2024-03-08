@@ -11,6 +11,9 @@ import (
 )
 
 func RegisterAnimalRoutes(db *sql.DB) error {
+	type indexPage struct {
+		Animals []animals.Animal
+	}
 	type newAnimal struct {
 		AnimalTypes []animals.AnimalType
 	}
@@ -20,7 +23,17 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 		return err
 	}
 
+	indexTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/index.html"))
 	newAnimalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/new.html"))
+
+	http.HandleFunc("GET /animals", func(w http.ResponseWriter, r *http.Request) {
+		anmls, err := animals.GetAll(db, animalTypes)
+		if err != nil {
+			http.Error(w, "Oops", http.StatusInternalServerError)
+			return
+		}
+		indexTmpl.Execute(w, indexPage{Animals: anmls})
+	})
 
 	http.HandleFunc("GET /animals/new", func(w http.ResponseWriter, r *http.Request) {
 		newAnimalTmpl.Execute(w, newAnimal{AnimalTypes: animalTypes})
@@ -57,7 +70,7 @@ func RegisterAnimalRoutes(db *sql.DB) error {
 			return
 		}
 
-		http.Redirect(w, r, "/", http.StatusFound)
+		http.Redirect(w, r, "/animals", http.StatusFound)
 	})
 
 	return nil
