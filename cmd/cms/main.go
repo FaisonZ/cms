@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"faisonz.net/cms/internal/db"
 	"faisonz.net/cms/web"
 )
 
@@ -19,7 +20,10 @@ func main() {
 	case "start":
 		web.StartServer()
 	case "db-init":
-		fmt.Println("Needs to be implemented")
+		if err := db.SetupDatabase(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	default:
 		fmt.Println("Invalid command:", args[0])
 		os.Exit(1)

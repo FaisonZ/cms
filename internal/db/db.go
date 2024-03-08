@@ -1,17 +1,112 @@
-package main
+package db
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
 	"os"
+	"slices"
+	"strings"
 
+	"github.com/joho/godotenv"
 	_ "github.com/tursodatabase/libsql-client-go/libsql"
 	_ "modernc.org/sqlite"
 )
 
-func db_main() {
-	db, err := load_db()
+func SetupDatabase() error {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("godotenv.Load(): ", err)
+	}
+
+	db, err := loadDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	tables, err := getMissingTables(db)
+	if err != nil {
+		return err
+	}
+
+	if err := createTables(tables, db); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getMissingTables(db *sql.DB) ([]string, error) {
+	tables := []string{
+		"animal_types",
+		"animals",
+	}
+
+	tNames := make([]any, len(tables))
+	for i, v := range tables {
+		tNames[i] = v
+	}
+
+	queryString := `SELECT NAME FROM sqlite_master WHERE type="table" AND NAME IN (?` + strings.Repeat(", ?", len(tNames)-1) + `)`
+
+	rows, err := db.Query(queryString, tNames...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var tName string
+		if err := rows.Scan(&tName); err != nil {
+			return nil, err
+		}
+
+		i := slices.Index(tables, tName)
+
+		if i == -1 {
+			continue
+		}
+
+		tables = slices.Delete(tables, i, i+1)
+	}
+
+	return tables, nil
+}
+
+func createTables(tNames []string, db *sql.DB) error {
+	for _, tName := range tNames {
+		var createStmt string
+		switch tName {
+		case "animal_types":
+			createStmt = "CREATE TABLE animal_types (\n" +
+				"id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
+				"name TEXT NOT NULL\n" +
+				")"
+		case "animals":
+			createStmt = "CREATE TABLE animals (\n" +
+				"id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
+				"type_id INTEGER NOT NULL,\n" +
+				"name TEXT NOT NULL DEFAULT '',\n" +
+				"FOREIGN KEY (type_id) REFERENCES animal_types(id)\n" +
+				")"
+		default:
+			continue
+		}
+
+		fmt.Println(createStmt)
+		if _, err := db.Exec(createStmt); err != nil {
+			return err
+		}
+
+		fmt.Println("Created table:", tName)
+	}
+
+	return nil
+}
+
+func dbMain() {
+	db, err := loadDB()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -22,18 +117,10 @@ func db_main() {
 		}
 	}()
 
-	// createTables(db)
 	// insertUsers(db)
 	queryUsers(db)
 
 	defer db.Close()
-}
-
-func createTables(db *sql.DB) {
-	_, err := db.Exec("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)")
-	if err != nil {
-		log.Fatal("Create Table:", err)
-	}
 }
 
 func insertUsers(db *sql.DB) {
@@ -45,19 +132,19 @@ func insertUsers(db *sql.DB) {
 	}
 }
 
-func load_db() (*sql.DB, error) {
+func loadDB() (*sql.DB, error) {
 	db_source := os.Getenv("DB")
 	fmt.Println(db_source)
 
 	switch db_source {
 	case "local":
-		db, err := load_sqlite()
+		db, err := loadSQLite()
 		if err != nil {
 			return nil, err
 		}
 		return db, nil
 	case "remote":
-		db, err := load_libsql()
+		db, err := loadLibSQL()
 		if err != nil {
 			return nil, err
 		}
@@ -67,7 +154,7 @@ func load_db() (*sql.DB, error) {
 	}
 }
 
-func load_sqlite() (*sql.DB, error) {
+func loadSQLite() (*sql.DB, error) {
 	fn := "./local.db"
 
 	db, err := sql.Open("sqlite", fn)
@@ -78,7 +165,7 @@ func load_sqlite() (*sql.DB, error) {
 	return db, nil
 }
 
-func load_libsql() (*sql.DB, error) {
+func loadLibSQL() (*sql.DB, error) {
 	url := fmt.Sprintf("libsql://%s.turso.io?authToken=%s", os.Getenv("DB_NAME"), os.Getenv("DB_TOKEN"))
 
 	db, err := sql.Open("libsql", url)
