@@ -6,10 +6,11 @@ import (
 	"net/http"
 
 	"faisonz.net/cms/internal/users"
+	"github.com/alexedwards/scs/v2"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func RegisterUserRoutes(mux *http.ServeMux, db *sql.DB) error {
+func RegisterUserRoutes(mux *http.ServeMux, sessionManager *scs.SessionManager, db *sql.DB) error {
 	registerTempl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/users/register.html"))
 	loginTempl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/users/login.html"))
 
@@ -59,6 +60,22 @@ func RegisterUserRoutes(mux *http.ServeMux, db *sql.DB) error {
 			return
 		}
 
+		sessionManager.Put(r.Context(), "user_id", user.ID)
+		// sessionID, _, err := sessionManager.Commit(r.Context())
+		// if err != nil {
+		// 	http.Error(w, "Oops", http.StatusInternalServerError)
+		// 	return
+		// }
+
+		// if err := sessions.LinkSessionWithUser(sessionID, user, db); err != nil {
+		// 	http.Error(w, "Oops", http.StatusInternalServerError)
+		// }
+
+		http.Redirect(w, r, "/", http.StatusFound)
+	})
+
+	mux.HandleFunc("GET /logout", func(w http.ResponseWriter, r *http.Request) {
+		sessionManager.Destroy(r.Context())
 		http.Redirect(w, r, "/", http.StatusFound)
 	})
 

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"faisonz.net/cms/internal/db"
+	"faisonz.net/cms/internal/sessions"
 	"faisonz.net/cms/web/routes"
 	"github.com/joho/godotenv"
 )
@@ -25,7 +26,10 @@ func StartServer() {
 		log.Fatal(db)
 	}
 
+	sessionManager := sessions.New(db)
+
 	mux := http.NewServeMux()
+	hndl := sessionManager.LoadAndSave(mux)
 
 	tmpl := template.Must(template.ParseFiles("web/templates/layout.html"))
 
@@ -53,7 +57,7 @@ func StartServer() {
 		http.ServeFile(w, r, fp)
 	})
 
-	routes.RegisterUserRoutes(mux, db)
+	routes.RegisterUserRoutes(mux, sessionManager, db)
 	routes.RegisterAnimalRoutes(mux, db)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -62,5 +66,5 @@ func StartServer() {
 
 	log.Println("Server started on port 3000")
 
-	log.Fatal(http.ListenAndServe(":3000", mux))
+	log.Fatal(http.ListenAndServe(":3000", hndl))
 }

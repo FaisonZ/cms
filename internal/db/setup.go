@@ -48,6 +48,8 @@ func SetupDatabase() error {
 func getMissingTables(db *sql.DB) ([]string, error) {
 	tables := []string{
 		"users",
+		"sessions",
+		"user_sessions",
 		"animal_types",
 		"animals",
 	}
@@ -99,11 +101,26 @@ func createTables(tNames []string, db *sql.DB) error {
 				"name TEXT NOT NULL DEFAULT '',\n" +
 				"FOREIGN KEY (type_id) REFERENCES animal_types(id)\n" +
 				")"
+		case "sessions":
+			createStmt = "CREATE TABLE sessions (\n" +
+				"token TEXT PRIMARY KEY,\n" +
+				"data BLOB NOT NULL,\n" +
+				"expiry REAL NOT NULL" +
+				");\n" +
+				"CREATE INDEX sessions_expiry_idx ON sessions(expiry);"
 		case "users":
 			createStmt = "CREATE TABLE users (\n" +
 				"id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
 				"username TEXT UNIQUE NOT NULL,\n" +
 				"password TEXT NOT NULL" +
+				")"
+		case "user_sessions":
+			// Cascase delete not working
+			createStmt = "CREATE TABLE user_sessions (\n" +
+				"user_id INTEGER NOT NULL,\n" +
+				"session_token TEXT NOT NULL,\n" +
+				"FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,\n" +
+				"FOREIGN KEY (session_token) REFERENCES sessions(token) ON DELETE CASCADE\n" +
 				")"
 		default:
 			continue
