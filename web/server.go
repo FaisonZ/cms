@@ -53,6 +53,7 @@ func StartServer() {
 		http.ServeFile(w, r, fp)
 	})
 
+	routes.RegisterUserRoutes(mux, db)
 	routes.RegisterAnimalRoutes(mux, db)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

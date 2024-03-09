@@ -1,0 +1,27 @@
+{{define "title"}}🐮MS: Register{{end}}
+
+{{define "main"}}
+<h2>Register for an account</h2>
+
+<form action="/register" method="POST">
+    <input
+        name="username"
+        type="text"
+        value=""
+        required
+    >
+    <br>
+    <br>
+    <input
+        name="password"
+        type="password"
+        value=""
+        minlength="8"
+        required
+    >
+    <br>
+    <br>
+    <button type="submit">Register</button>
+    <a href="/">Cancel</a>
+</form>
+{{end}}

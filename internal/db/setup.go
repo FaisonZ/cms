@@ -47,6 +47,7 @@ func SetupDatabase() error {
 
 func getMissingTables(db *sql.DB) ([]string, error) {
 	tables := []string{
+		"users",
 		"animal_types",
 		"animals",
 	}
@@ -98,11 +99,16 @@ func createTables(tNames []string, db *sql.DB) error {
 				"name TEXT NOT NULL DEFAULT '',\n" +
 				"FOREIGN KEY (type_id) REFERENCES animal_types(id)\n" +
 				")"
+		case "users":
+			createStmt = "CREATE TABLE users (\n" +
+				"id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
+				"username TEXT UNIQUE NOT NULL,\n" +
+				"password TEXT NOT NULL" +
+				")"
 		default:
 			continue
 		}
 
-		fmt.Println(createStmt)
 		if _, err := db.Exec(createStmt); err != nil {
 			return err
 		}
