@@ -6,13 +6,13 @@ import (
 	"log"
 	"net/http"
 
+	"faisonz.net/cms/internal/sessions"
 	"faisonz.net/cms/internal/users"
-	"github.com/alexedwards/scs/v2"
 )
 
 type AuthMux struct {
 	*http.ServeMux
-	Session *scs.SessionManager
+	Session *sessions.Session
 	DB      *sql.DB
 }
 
@@ -22,7 +22,7 @@ type key string
 
 const authUserKey key = "user"
 
-func NewAuthMux(session *scs.SessionManager, db *sql.DB) *AuthMux {
+func NewAuthMux(session *sessions.Session, db *sql.DB) *AuthMux {
 	return &AuthMux{
 		ServeMux: http.NewServeMux(),
 		Session:  session,
@@ -33,8 +33,8 @@ func NewAuthMux(session *scs.SessionManager, db *sql.DB) *AuthMux {
 func (mux *AuthMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println("In the AuthMux")
 
-	userID, ok := mux.Session.Get(r.Context(), "user_id").(int)
-	if !ok {
+	userID := mux.Session.GetUserID(r.Context())
+	if userID == -1 {
 		log.Println("No user id in session")
 		mux.ServeMux.ServeHTTP(w, r)
 		return
@@ -89,6 +89,7 @@ func (mux *AuthMux) ReceiveRouteHandlers(rff RouteHandlersFunc) {
 	rff(mux)
 }
 
+// TODO: Make this a part of Session?
 func GetUserFromContext(ctx context.Context) (*users.User, bool) {
 	user, ok := ctx.Value(authUserKey).(*users.User)
 	return user, ok

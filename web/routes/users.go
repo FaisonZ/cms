@@ -59,16 +59,7 @@ func UserRouteHandlers(mux *mux.AuthMux) {
 			return
 		}
 
-		mux.Session.Put(r.Context(), "user_id", user.ID)
-		// sessionID, _, err := mux.Session.Commit(r.Context())
-		// if err != nil {
-		// 	http.Error(w, "Oops", http.StatusInternalServerError)
-		// 	return
-		// }
-
-		// if err := sessions.LinkSessionWithUser(sessionID, user, mux.DB); err != nil {
-		// 	http.Error(w, "Oops", http.StatusInternalServerError)
-		// }
+		mux.Session.PutUserID(r.Context(), user.ID)
 
 		http.Redirect(w, r, "/animals", http.StatusFound)
 	})
