@@ -32,32 +32,25 @@ func NewAuthMux(session *scs.SessionManager, db *sql.DB) *AuthMux {
 
 func (mux *AuthMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println("In the AuthMux")
-	mux.withAuthedUser(mux.ServeMux).ServeHTTP(w, r)
-}
 
-func (mux *AuthMux) withAuthedUser(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("In authed user")
+	userID, ok := mux.Session.Get(r.Context(), "user_id").(int)
+	if !ok {
+		log.Println("No user id in session")
+		mux.ServeMux.ServeHTTP(w, r)
+		return
+	}
 
-		userID, ok := mux.Session.Get(r.Context(), "user_id").(int)
-		if !ok {
-			log.Println("No user id in session")
-			next.ServeHTTP(w, r)
-			return
-		}
+	user, err := users.GetUserByID(userID, mux.DB)
+	if err != nil {
+		log.Println("no user found for use id in session")
+		mux.ServeMux.ServeHTTP(w, r)
+		return
+	}
 
-		user, err := users.GetUserByID(userID, mux.DB)
-		if err != nil {
-			log.Println("no user found for use id in session")
-			next.ServeHTTP(w, r)
-			return
-		}
+	log.Println("User found in session:", user.Username)
 
-		log.Println("User found in session:", user.Username)
-
-		ctx := context.WithValue(r.Context(), authUserKey, user)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+	ctx := context.WithValue(r.Context(), authUserKey, user)
+	mux.ServeMux.ServeHTTP(w, r.WithContext(ctx))
 }
 
 func (mux *AuthMux) ProtectHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
