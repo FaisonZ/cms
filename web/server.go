@@ -11,6 +11,7 @@ import (
 
 	"faisonz.net/cms/internal/db"
 	"faisonz.net/cms/internal/sessions"
+	"faisonz.net/cms/web/mux"
 	"faisonz.net/cms/web/routes"
 	"github.com/joho/godotenv"
 )
@@ -28,13 +29,20 @@ func StartServer() {
 
 	sessionManager := sessions.New(db)
 
-	mux := http.NewServeMux()
-	hndl := sessionManager.LoadAndSave(mux)
+	mux := mux.NewAuthMux(sessionManager, db)
+	hndl := sessionManager.LoadAndSave(
+		mux,
+	)
 
 	tmpl := template.Must(template.ParseFiles("web/templates/layout.html"))
 
+	type homeData struct {
+		sessions.SessionData
+	}
+
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		tmpl.Execute(w, nil)
+		sessionData := sessions.GetSessionData(mux.Session, r.Context())
+		tmpl.Execute(w, homeData{SessionData: sessionData})
 	})
 
 	mux.HandleFunc("GET /static/styles/{file}", func(w http.ResponseWriter, r *http.Request) {
@@ -57,8 +65,8 @@ func StartServer() {
 		http.ServeFile(w, r, fp)
 	})
 
-	routes.RegisterUserRoutes(mux, sessionManager, db)
-	routes.RegisterAnimalRoutes(mux, db)
+	mux.ReceiveRouteHandlers(routes.UserRouteHandlers)
+	mux.ReceiveRouteHandlers(routes.AnimalRouteHandlers)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		routes.Serve404(w, r)

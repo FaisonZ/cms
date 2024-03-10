@@ -1,34 +1,35 @@
 package routes
 
 import (
-	"database/sql"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"slices"
 	"strconv"
 
 	"faisonz.net/cms/internal/animals"
+	"faisonz.net/cms/web/mux"
 )
 
-func RegisterAnimalRoutes(mux *http.ServeMux, db *sql.DB) error {
-	type indexPage struct {
-		Animals []animals.Animal
-	}
-	type animalPage struct {
-		Animal animals.Animal
-	}
-	type editAnimalPage struct {
-		Animal      animals.Animal
-		AnimalTypes []animals.AnimalType
-	}
-	type newAnimal struct {
-		AnimalTypes []animals.AnimalType
-	}
+type indexPage struct {
+	Animals []animals.Animal
+}
+type animalPage struct {
+	Animal animals.Animal
+}
+type editAnimalPage struct {
+	Animal      animals.Animal
+	AnimalTypes []animals.AnimalType
+}
+type newAnimal struct {
+	AnimalTypes []animals.AnimalType
+}
 
-	animalTypes, err := animals.GetAnimalTypes(db)
+func AnimalRouteHandlers(mux *mux.AuthMux) {
+	animalTypes, err := animals.GetAnimalTypes(mux.DB)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
 	indexTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/index.html"))
@@ -36,8 +37,8 @@ func RegisterAnimalRoutes(mux *http.ServeMux, db *sql.DB) error {
 	editAnimalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/edit.html"))
 	newAnimalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/new.html"))
 
-	mux.HandleFunc("GET /animals", func(w http.ResponseWriter, r *http.Request) {
-		anmls, err := animals.GetAll(db)
+	mux.ProtectHandleFunc("GET /animals", func(w http.ResponseWriter, r *http.Request) {
+		anmls, err := animals.GetAll(mux.DB)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
@@ -49,14 +50,14 @@ func RegisterAnimalRoutes(mux *http.ServeMux, db *sql.DB) error {
 		indexTmpl.Execute(w, indexPage{Animals: anmls})
 	})
 
-	mux.HandleFunc("GET /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.ProtectHandleFunc("GET /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
 			Serve404(w, r)
 			return
 		}
 
-		anml, err := animals.Get(int(id), db)
+		anml, err := animals.Get(int(id), mux.DB)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
@@ -74,14 +75,14 @@ func RegisterAnimalRoutes(mux *http.ServeMux, db *sql.DB) error {
 		animalTmpl.Execute(w, animalPage{Animal: *anml})
 	})
 
-	mux.HandleFunc("GET /animals/{id}/edit", func(w http.ResponseWriter, r *http.Request) {
+	mux.ProtectHandleFunc("GET /animals/{id}/edit", func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
 			Serve404(w, r)
 			return
 		}
 
-		anml, err := animals.Get(int(id), db)
+		anml, err := animals.Get(int(id), mux.DB)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
@@ -99,14 +100,14 @@ func RegisterAnimalRoutes(mux *http.ServeMux, db *sql.DB) error {
 		editAnimalTmpl.Execute(w, editAnimalPage{Animal: *anml, AnimalTypes: animalTypes})
 	})
 
-	mux.HandleFunc("POST /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.ProtectHandleFunc("POST /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
 			Serve404(w, r)
 			return
 		}
 
-		anml, err := animals.Get(int(id), db)
+		anml, err := animals.Get(int(id), mux.DB)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
@@ -119,7 +120,7 @@ func RegisterAnimalRoutes(mux *http.ServeMux, db *sql.DB) error {
 
 		anml.Name = r.FormValue("name")
 
-		if err := animals.Update(*anml, db); err != nil {
+		if err := animals.Update(*anml, mux.DB); err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
 		}
@@ -127,11 +128,11 @@ func RegisterAnimalRoutes(mux *http.ServeMux, db *sql.DB) error {
 		http.Redirect(w, r, fmt.Sprintf("/animals/%d", anml.ID), http.StatusSeeOther)
 	})
 
-	mux.HandleFunc("GET /animals/new", func(w http.ResponseWriter, r *http.Request) {
+	mux.ProtectHandleFunc("GET /animals/new", func(w http.ResponseWriter, r *http.Request) {
 		newAnimalTmpl.Execute(w, newAnimal{AnimalTypes: animalTypes})
 	})
 
-	mux.HandleFunc("POST /animals", func(w http.ResponseWriter, r *http.Request) {
+	mux.ProtectHandleFunc("POST /animals", func(w http.ResponseWriter, r *http.Request) {
 		aTypeID, err := strconv.ParseInt(r.FormValue("animalType"), 10, 0)
 		if err != nil {
 			http.Error(w, "Invalid type id", http.StatusBadRequest)
@@ -157,13 +158,11 @@ func RegisterAnimalRoutes(mux *http.ServeMux, db *sql.DB) error {
 			AnimalType: animalTypes[typeIndex],
 		}
 
-		if err := animals.SaveMany(animal, int(total), db); err != nil {
+		if err := animals.SaveMany(animal, int(total), mux.DB); err != nil {
 			http.Error(w, "Unexepected error saving animals", http.StatusInternalServerError)
 			return
 		}
 
 		http.Redirect(w, r, "/animals", http.StatusFound)
 	})
-
-	return nil
 }

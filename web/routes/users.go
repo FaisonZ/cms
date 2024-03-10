@@ -1,24 +1,23 @@
 package routes
 
 import (
-	"database/sql"
 	"html/template"
 	"net/http"
 
 	"faisonz.net/cms/internal/users"
-	"github.com/alexedwards/scs/v2"
+	"faisonz.net/cms/web/mux"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func RegisterUserRoutes(mux *http.ServeMux, sessionManager *scs.SessionManager, db *sql.DB) error {
+func UserRouteHandlers(mux *mux.AuthMux) {
 	registerTempl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/users/register.html"))
 	loginTempl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/users/login.html"))
 
-	mux.HandleFunc("GET /register", func(w http.ResponseWriter, r *http.Request) {
+	mux.NoAuthOnlyHandleFunc("GET /register", func(w http.ResponseWriter, r *http.Request) {
 		registerTempl.Execute(w, nil)
 	})
 
-	mux.HandleFunc("POST /register", func(w http.ResponseWriter, r *http.Request) {
+	mux.NoAuthOnlyHandleFunc("POST /register", func(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		rawPass := r.FormValue("password")
 
@@ -33,7 +32,7 @@ func RegisterUserRoutes(mux *http.ServeMux, sessionManager *scs.SessionManager, 
 			Password: string(passBytes),
 		}
 
-		if err := users.SaveNew(&newUser, db); err != nil {
+		if err := users.SaveNew(&newUser, mux.DB); err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
 		}
@@ -41,15 +40,15 @@ func RegisterUserRoutes(mux *http.ServeMux, sessionManager *scs.SessionManager, 
 		http.Redirect(w, r, "/", http.StatusFound)
 	})
 
-	mux.HandleFunc("GET /login", func(w http.ResponseWriter, r *http.Request) {
+	mux.NoAuthOnlyHandleFunc("GET /login", func(w http.ResponseWriter, r *http.Request) {
 		loginTempl.Execute(w, nil)
 	})
 
-	mux.HandleFunc("POST /login", func(w http.ResponseWriter, r *http.Request) {
+	mux.NoAuthOnlyHandleFunc("POST /login", func(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		rawPass := r.FormValue("password")
 
-		user, err := users.GetUserByUsername(username, db)
+		user, err := users.GetUserByUsername(username, mux.DB)
 		if err != nil || user == nil {
 			http.Error(w, "Username or Password incorrect", http.StatusUnauthorized)
 			return
@@ -60,24 +59,22 @@ func RegisterUserRoutes(mux *http.ServeMux, sessionManager *scs.SessionManager, 
 			return
 		}
 
-		sessionManager.Put(r.Context(), "user_id", user.ID)
-		// sessionID, _, err := sessionManager.Commit(r.Context())
+		mux.Session.Put(r.Context(), "user_id", user.ID)
+		// sessionID, _, err := mux.Session.Commit(r.Context())
 		// if err != nil {
 		// 	http.Error(w, "Oops", http.StatusInternalServerError)
 		// 	return
 		// }
 
-		// if err := sessions.LinkSessionWithUser(sessionID, user, db); err != nil {
+		// if err := sessions.LinkSessionWithUser(sessionID, user, mux.DB); err != nil {
 		// 	http.Error(w, "Oops", http.StatusInternalServerError)
 		// }
 
-		http.Redirect(w, r, "/", http.StatusFound)
+		http.Redirect(w, r, "/animals", http.StatusFound)
 	})
 
 	mux.HandleFunc("GET /logout", func(w http.ResponseWriter, r *http.Request) {
-		sessionManager.Destroy(r.Context())
+		mux.Session.Destroy(r.Context())
 		http.Redirect(w, r, "/", http.StatusFound)
 	})
-
-	return nil
 }
