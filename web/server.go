@@ -28,11 +28,7 @@ func StartServer() {
 	}
 
 	sessionManager := sessions.New(db)
-
 	mux := mux.NewAuthMux(sessionManager, db)
-	hndl := sessionManager.LoadAndSave(
-		mux,
-	)
 
 	tmpl := template.Must(template.ParseFiles("web/templates/layout.html"))
 
@@ -74,5 +70,5 @@ func StartServer() {
 
 	log.Println("Server started on port 3000")
 
-	log.Fatal(http.ListenAndServe(":3000", hndl))
+	log.Fatal(http.ListenAndServe(":3000", sessionManager.LoadAndSave(mux)))
 }
