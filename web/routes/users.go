@@ -9,15 +9,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func UserRouteHandlers(mux *mux.AuthMux) {
+func UserRouteHandlers(m *mux.AuthMux) {
 	registerTempl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/users/register.html"))
 	loginTempl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/users/login.html"))
 
-	mux.NoAuthOnlyHandleFunc("GET /register", func(w http.ResponseWriter, r *http.Request) {
-		registerTempl.Execute(w, nil)
+	m.NoAuthOnlyHandleFunc("GET /register", func(w http.ResponseWriter, r *http.Request) {
+		templateData := m.GetTemplateData(r.Context())
+		registerTempl.Execute(w, templateData)
 	})
 
-	mux.NoAuthOnlyHandleFunc("POST /register", func(w http.ResponseWriter, r *http.Request) {
+	m.NoAuthOnlyHandleFunc("POST /register", func(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		rawPass := r.FormValue("password")
 
@@ -32,7 +33,7 @@ func UserRouteHandlers(mux *mux.AuthMux) {
 			Password: string(passBytes),
 		}
 
-		if err := users.SaveNew(&newUser, mux.DB); err != nil {
+		if err := users.SaveNew(&newUser, m.DB); err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
 		}
@@ -40,15 +41,16 @@ func UserRouteHandlers(mux *mux.AuthMux) {
 		http.Redirect(w, r, "/", http.StatusFound)
 	})
 
-	mux.NoAuthOnlyHandleFunc("GET /login", func(w http.ResponseWriter, r *http.Request) {
-		loginTempl.Execute(w, nil)
+	m.NoAuthOnlyHandleFunc("GET /login", func(w http.ResponseWriter, r *http.Request) {
+		templateData := m.GetTemplateData(r.Context())
+		loginTempl.Execute(w, templateData)
 	})
 
-	mux.NoAuthOnlyHandleFunc("POST /login", func(w http.ResponseWriter, r *http.Request) {
+	m.NoAuthOnlyHandleFunc("POST /login", func(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		rawPass := r.FormValue("password")
 
-		user, err := users.GetUserByUsername(username, mux.DB)
+		user, err := users.GetUserByUsername(username, m.DB)
 		if err != nil || user == nil {
 			http.Error(w, "Username or Password incorrect", http.StatusUnauthorized)
 			return
@@ -59,13 +61,13 @@ func UserRouteHandlers(mux *mux.AuthMux) {
 			return
 		}
 
-		mux.Session.PutUserID(r.Context(), user.ID)
+		m.Session.PutUserID(r.Context(), user.ID)
 
 		http.Redirect(w, r, "/animals", http.StatusFound)
 	})
 
-	mux.HandleFunc("GET /logout", func(w http.ResponseWriter, r *http.Request) {
-		mux.Session.Destroy(r.Context())
+	m.HandleFunc("GET /logout", func(w http.ResponseWriter, r *http.Request) {
+		m.Session.Destroy(r.Context())
 		http.Redirect(w, r, "/", http.StatusFound)
 	})
 }

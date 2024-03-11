@@ -12,9 +12,12 @@
         <nav>
             <a href="/animals">Animals</a>
             <a href="/animals/new">New Animals</a>
+            {{if .LoggedIn}}
+            <a href="/logout">Logout</a>
+            {{else}}
             <a href="/register">Register</a>
             <a href="/login">Login</a>
-            <a href="/logout">Logout</a>
+            {{end}}
         </nav>
     </header>
     <main>

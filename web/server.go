@@ -28,20 +28,16 @@ func StartServer() {
 	}
 
 	sessionManager := sessions.New(db)
-	mux := mux.NewAuthMux(sessionManager, db)
+	authMux := mux.NewAuthMux(sessionManager, db)
 
 	tmpl := template.Must(template.ParseFiles("web/templates/layout.html"))
 
-	type homeData struct {
-		sessions.SessionData
-	}
-
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		sessionData := sessions.GetSessionData(mux.Session, r.Context())
-		tmpl.Execute(w, homeData{SessionData: sessionData})
+	authMux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		templateData := authMux.GetTemplateData(r.Context())
+		tmpl.Execute(w, templateData)
 	})
 
-	mux.HandleFunc("GET /static/styles/{file}", func(w http.ResponseWriter, r *http.Request) {
+	authMux.HandleFunc("GET /static/styles/{file}", func(w http.ResponseWriter, r *http.Request) {
 		file := r.PathValue("file")
 
 		if !strings.HasSuffix(file, ".css") {
@@ -61,14 +57,14 @@ func StartServer() {
 		http.ServeFile(w, r, fp)
 	})
 
-	mux.ReceiveRouteHandlers(routes.UserRouteHandlers)
-	mux.ReceiveRouteHandlers(routes.AnimalRouteHandlers)
+	authMux.ReceiveRouteHandlers(routes.UserRouteHandlers)
+	authMux.ReceiveRouteHandlers(routes.AnimalRouteHandlers)
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	authMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		routes.Serve404(w, r)
 	})
 
 	log.Println("Server started on port 3000")
 
-	log.Fatal(http.ListenAndServe(":3000", sessionManager.LoadAndSave(mux)))
+	log.Fatal(http.ListenAndServe(":3000", sessionManager.LoadAndSave(authMux)))
 }

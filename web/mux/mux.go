@@ -18,6 +18,11 @@ type AuthMux struct {
 
 type RouteHandlersFunc func(*AuthMux)
 
+type TemplateData struct {
+	LoggedIn bool
+	User     users.User
+}
+
 type key string
 
 const authUserKey key = "user"
@@ -30,31 +35,31 @@ func NewAuthMux(session *sessions.Session, db *sql.DB) *AuthMux {
 	}
 }
 
-func (mux *AuthMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *AuthMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println("In the AuthMux")
 
-	userID := mux.Session.GetUserID(r.Context())
+	userID := m.Session.GetUserID(r.Context())
 	if userID == -1 {
 		log.Println("No user id in session")
-		mux.ServeMux.ServeHTTP(w, r)
+		m.ServeMux.ServeHTTP(w, r)
 		return
 	}
 
-	user, err := users.GetUserByID(userID, mux.DB)
+	user, err := users.GetUserByID(userID, m.DB)
 	if err != nil {
 		log.Println("no user found for use id in session")
-		mux.ServeMux.ServeHTTP(w, r)
+		m.ServeMux.ServeHTTP(w, r)
 		return
 	}
 
 	log.Println("User found in session:", user.Username)
 
-	ctx := context.WithValue(r.Context(), authUserKey, user)
-	mux.ServeMux.ServeHTTP(w, r.WithContext(ctx))
+	ctx := context.WithValue(r.Context(), authUserKey, *user)
+	m.ServeMux.ServeHTTP(w, r.WithContext(ctx))
 }
 
-func (mux *AuthMux) ProtectHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+func (m *AuthMux) ProtectHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+	m.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Checking auth status...")
 		_, loggedIn := GetUserFromContext(r.Context())
 		if !loggedIn {
@@ -69,8 +74,8 @@ func (mux *AuthMux) ProtectHandleFunc(pattern string, handler func(http.Response
 	})
 }
 
-func (mux *AuthMux) NoAuthOnlyHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+func (m *AuthMux) NoAuthOnlyHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+	m.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Checking auth status...")
 		_, loggedIn := GetUserFromContext(r.Context())
 		if loggedIn {
@@ -85,12 +90,22 @@ func (mux *AuthMux) NoAuthOnlyHandleFunc(pattern string, handler func(http.Respo
 	})
 }
 
-func (mux *AuthMux) ReceiveRouteHandlers(rff RouteHandlersFunc) {
-	rff(mux)
+func (m *AuthMux) ReceiveRouteHandlers(rff RouteHandlersFunc) {
+	rff(m)
+}
+
+func (m *AuthMux) GetTemplateData(ctx context.Context) TemplateData {
+	var data TemplateData
+	data.User, data.LoggedIn = GetUserFromContext(ctx)
+	return data
 }
 
 // TODO: Make this a part of Session?
-func GetUserFromContext(ctx context.Context) (*users.User, bool) {
-	user, ok := ctx.Value(authUserKey).(*users.User)
+func GetUserFromContext(ctx context.Context) (users.User, bool) {
+	user, ok := ctx.Value(authUserKey).(users.User)
+
+	// Don't accidentally leak a pass hash through a template
+	user.Password = ""
+
 	return user, ok
 }

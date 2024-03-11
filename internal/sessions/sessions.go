@@ -12,7 +12,7 @@ import (
 )
 
 type Session struct {
-	*scs.SessionManager
+	sessionManager *scs.SessionManager
 }
 
 type SessionData struct {
@@ -26,16 +26,20 @@ func New(db *sql.DB) *Session {
 	sessionManager.Lifetime = time.Hour * 4
 
 	return &Session{
-		SessionManager: sessionManager,
+		sessionManager: sessionManager,
 	}
 }
 
 func (s *Session) LoadAndSave(next http.Handler) http.Handler {
-	return s.SessionManager.LoadAndSave(next)
+	return s.sessionManager.LoadAndSave(next)
+}
+
+func (s *Session) Destroy(ctx context.Context) error {
+	return s.sessionManager.Destroy(ctx)
 }
 
 func (s *Session) GetUserID(ctx context.Context) int {
-	userID, ok := s.Get(ctx, "user_id").(int)
+	userID, ok := s.sessionManager.Get(ctx, "user_id").(int)
 	if !ok {
 		return -1
 	}
@@ -44,7 +48,7 @@ func (s *Session) GetUserID(ctx context.Context) int {
 }
 
 func (s *Session) PutUserID(ctx context.Context, id int) {
-	s.Put(ctx, "user_id", id)
+	s.sessionManager.Put(ctx, "user_id", id)
 	// TODO: Connect session id with user id
 	// sessionID, _, err := mux.Session.Commit(r.Context())
 	// if err != nil {
@@ -63,12 +67,4 @@ func LinkSessionWithUser(sessionID string, user *users.User, db *sql.DB) error {
 	}
 
 	return nil
-}
-
-func GetSessionData(session *Session, ctx context.Context) SessionData {
-	var data SessionData
-
-	// data.User, data.LoggedIn = mux.GetUserFromContext(ctx)
-
-	return data
 }
