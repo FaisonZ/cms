@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	_ "github.com/tursodatabase/libsql-client-go/libsql"
 	_ "modernc.org/sqlite"
@@ -31,7 +32,12 @@ func LoadDB() (*sql.DB, error) {
 }
 
 func loadSQLite() (*sql.DB, error) {
-	fn := "./local.db"
+	err := os.Mkdir("local-db", 0750)
+	if err != nil && !os.IsExist(err) {
+		return nil, fmt.Errorf("cannot create local-db dir: %w", err)
+	}
+
+	fn := filepath.Join("local-db", "local.db")
 
 	db, err := sql.Open("sqlite", fn)
 	if err != nil {

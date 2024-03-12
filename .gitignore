@@ -1,2 +1,2 @@
-local.db
 .env
+local-db/
