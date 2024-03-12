@@ -21,7 +21,7 @@ func main() {
 	case "start":
 		web.StartServer()
 	case "db-init":
-		if err := db.SetupDatabase(); err != nil {
+		if err := db.CreateMainDB(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
@@ -37,7 +37,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err := db.SetupClientDB(int(clientID)); err != nil {
+		if err := db.CreateClientDB(int(clientID)); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}

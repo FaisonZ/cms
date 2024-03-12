@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -10,7 +11,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func SetupDatabase() error {
+func CreateMainDB() error {
 	err := godotenv.Load()
 	if err != nil {
 		return err
@@ -26,7 +27,11 @@ func SetupDatabase() error {
 		}
 	}()
 
-	tables, err := getMissingTables(dbm.Main)
+	return SetupMainDB(dbm)
+}
+
+func SetupMainDB(dbm *DBManager) error {
+	tables, err := getMissingTables("main", dbm.Main)
 	if err != nil {
 		return err
 	}
@@ -44,7 +49,7 @@ func SetupDatabase() error {
 	return nil
 }
 
-func SetupClientDB(clientID int) error {
+func CreateClientDB(clientID int) error {
 	err := godotenv.Load()
 	if err != nil {
 		return err
@@ -54,28 +59,48 @@ func SetupClientDB(clientID int) error {
 	if err != nil {
 		return err
 	}
+	defer dbm.Main.Close()
 
+	return SetupClientDB(clientID, dbm)
+}
+
+func SetupClientDB(clientID int, dbm *DBManager) error {
 	clientDB, err := dbm.ClientDB(clientID)
 	if err != nil {
 		return err
 	}
+	defer clientDB.Close()
 
-	err = clientDB.Ping()
+	tables, err := getMissingTables("client", clientDB)
 	if err != nil {
-		fmt.Println("Couldn't ping client db")
+		return err
 	}
 
-	fmt.Println("Pinged client db")
+	if err := createTables(tables, clientDB); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func getMissingTables(db *sql.DB) ([]string, error) {
-	tables := []string{
-		"users",
-		"sessions",
-		"user_sessions",
-		"animal_types",
-		"animals",
+func getMissingTables(dbType string, db *sql.DB) ([]string, error) {
+	var tables []string
+
+	switch dbType {
+	case "main":
+		tables = []string{
+			"clients",
+			"users",
+			"sessions",
+			"user_sessions",
+			"animal_types",
+		}
+	case "client":
+		tables = []string{
+			"animals",
+		}
+	default:
+		return nil, errors.New("invalid db type:" + dbType)
 	}
 
 	tNames := make([]any, len(tables))
@@ -113,6 +138,12 @@ func createTables(tNames []string, db *sql.DB) error {
 	for _, tName := range tNames {
 		var createStmt string
 		switch tName {
+		case "clients":
+			createStmt = "CREATE TABLE clients (\n" +
+				"id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
+				"name TEXT UNIQUE NOT NULL,\n" +
+				"active INT NOT NULL DEFAULT 0" +
+				")"
 		case "animal_types":
 			createStmt = "CREATE TABLE animal_types (\n" +
 				"id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
@@ -122,8 +153,7 @@ func createTables(tNames []string, db *sql.DB) error {
 			createStmt = "CREATE TABLE animals (\n" +
 				"id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
 				"type_id INTEGER NOT NULL,\n" +
-				"name TEXT NOT NULL DEFAULT '',\n" +
-				"FOREIGN KEY (type_id) REFERENCES animal_types(id)\n" +
+				"name TEXT NOT NULL DEFAULT ''\n" +
 				")"
 		case "sessions":
 			createStmt = "CREATE TABLE sessions (\n" +
@@ -135,8 +165,10 @@ func createTables(tNames []string, db *sql.DB) error {
 		case "users":
 			createStmt = "CREATE TABLE users (\n" +
 				"id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
+				"client_id INTEGER NOT NULL,\n" +
 				"username TEXT UNIQUE NOT NULL,\n" +
-				"password TEXT NOT NULL" +
+				"password TEXT NOT NULL," +
+				"FOREIGN KEY (client_id) REFERENCES clients(id)\n" +
 				")"
 		case "user_sessions":
 			// Cascase delete not working
