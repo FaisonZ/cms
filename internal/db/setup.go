@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"slices"
 	"strings"
 
@@ -14,7 +13,7 @@ import (
 func SetupDatabase() error {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("godotenv.Load(): ", err)
+		return err
 	}
 
 	dbm, err := NewDBManager()
@@ -42,6 +41,31 @@ func SetupDatabase() error {
 
 	fmt.Println("Database created!")
 
+	return nil
+}
+
+func SetupClientDB(clientID int) error {
+	err := godotenv.Load()
+	if err != nil {
+		return err
+	}
+
+	dbm, err := NewDBManager()
+	if err != nil {
+		return err
+	}
+
+	clientDB, err := dbm.ClientDB(clientID)
+	if err != nil {
+		return err
+	}
+
+	err = clientDB.Ping()
+	if err != nil {
+		fmt.Println("Couldn't ping client db")
+	}
+
+	fmt.Println("Pinged client db")
 	return nil
 }
 

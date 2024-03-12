@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,7 +31,22 @@ func NewDBManager() (*DBManager, error) {
 // Checks clients for existing open db
 // returns if found
 // Opens new *sql.DB if not, stores in clients
-// func (dbm *DBManager) ClientDB(int) (*sql.DB, error)
+func (dbm *DBManager) ClientDB(clientID int) (*sql.DB, error) {
+	if clientID < 1 {
+		return nil, errors.New("invalid client id")
+	}
+
+	clientDB, ok := dbm.clients[clientID]
+	if !ok {
+		db, err := loadDB(fmt.Sprintf("client%d", clientID))
+		if err != nil {
+			return nil, err
+		}
+		clientDB = db
+	}
+
+	return clientDB, nil
+}
 
 func loadDB(dbName string) (*sql.DB, error) {
 	db_source := os.Getenv("DB")
