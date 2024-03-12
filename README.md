@@ -5,7 +5,7 @@
 To run the server locally while developing with automatic server restarts when updating files:
 
 ```sh
-reflex -R ^local\.db -s go run cmd/cms/main.go start
+reflex -r '\.(go|html)' -s go run cmd/cms/main.go start
 ```
 
 To create the local database:
