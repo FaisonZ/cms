@@ -2,10 +2,10 @@ package mux
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"net/http"
 
+	"faisonz.net/cms/internal/db"
 	"faisonz.net/cms/internal/sessions"
 	"faisonz.net/cms/internal/users"
 )
@@ -13,7 +13,7 @@ import (
 type AuthMux struct {
 	*http.ServeMux
 	Session *sessions.Session
-	DB      *sql.DB
+	DBM     *db.DBManager
 }
 
 type RouteHandlersFunc func(*AuthMux)
@@ -27,11 +27,11 @@ type key string
 
 const authUserKey key = "user"
 
-func NewAuthMux(session *sessions.Session, db *sql.DB) *AuthMux {
+func NewAuthMux(session *sessions.Session, dbm *db.DBManager) *AuthMux {
 	return &AuthMux{
 		ServeMux: http.NewServeMux(),
 		Session:  session,
-		DB:       db,
+		DBM:      dbm,
 	}
 }
 
@@ -45,7 +45,7 @@ func (m *AuthMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := users.GetUserByID(userID, m.DB)
+	user, err := users.GetUserByID(userID, m.DBM.Main)
 	if err != nil {
 		log.Println("no user found for use id in session")
 		m.ServeMux.ServeHTTP(w, r)

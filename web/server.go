@@ -22,13 +22,13 @@ func StartServer() {
 		log.Fatal("godotenv.Load(): ", err)
 	}
 
-	db, err := db.LoadDB()
+	dbm, err := db.NewDBManager()
 	if err != nil {
-		log.Fatal(db)
+		log.Fatal(err)
 	}
 
-	sessionManager := sessions.New(db)
-	authMux := mux.NewAuthMux(sessionManager, db)
+	sessionManager := sessions.New(dbm.Main)
+	authMux := mux.NewAuthMux(sessionManager, dbm)
 
 	tmpl := template.Must(template.ParseFiles("web/templates/layout.html"))
 

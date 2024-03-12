@@ -10,7 +10,29 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func LoadDB() (*sql.DB, error) {
+type DBManager struct {
+	Main    *sql.DB
+	clients map[int]*sql.DB
+}
+
+func NewDBManager() (*DBManager, error) {
+	main, err := loadDB()
+	if err != nil {
+		return nil, err
+	}
+
+	return &DBManager{
+		Main:    main,
+		clients: make(map[int]*sql.DB, 5),
+	}, nil
+}
+
+// Checks clients for existing open db
+// returns if found
+// Opens new *sql.DB if not, stores in clients
+// func (dbm *DBManager) ClientDB(int) (*sql.DB, error)
+
+func loadDB() (*sql.DB, error) {
 	db_source := os.Getenv("DB")
 
 	switch db_source {

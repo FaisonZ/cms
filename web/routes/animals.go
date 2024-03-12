@@ -20,7 +20,7 @@ type animalTemplateData struct {
 }
 
 func AnimalRouteHandlers(m *mux.AuthMux) {
-	animalTypes, err := animals.GetAnimalTypes(m.DB)
+	animalTypes, err := animals.GetAnimalTypes(m.DBM.Main)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -31,7 +31,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 	newAnimalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/new.html"))
 
 	m.ProtectHandleFunc("GET /animals", func(w http.ResponseWriter, r *http.Request) {
-		anmls, err := animals.GetAll(m.DB)
+		anmls, err := animals.GetAll(m.DBM.Main)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
@@ -53,7 +53,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 			return
 		}
 
-		anml, err := animals.Get(int(id), m.DB)
+		anml, err := animals.Get(int(id), m.DBM.Main)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
@@ -81,7 +81,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 			return
 		}
 
-		anml, err := animals.Get(int(id), m.DB)
+		anml, err := animals.Get(int(id), m.DBM.Main)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
@@ -110,7 +110,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 			return
 		}
 
-		anml, err := animals.Get(int(id), m.DB)
+		anml, err := animals.Get(int(id), m.DBM.Main)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
@@ -123,7 +123,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 
 		anml.Name = r.FormValue("name")
 
-		if err := animals.Update(*anml, m.DB); err != nil {
+		if err := animals.Update(*anml, m.DBM.Main); err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
 		}
@@ -164,7 +164,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 			AnimalType: animalTypes[typeIndex],
 		}
 
-		if err := animals.SaveMany(animal, int(total), m.DB); err != nil {
+		if err := animals.SaveMany(animal, int(total), m.DBM.Main); err != nil {
 			http.Error(w, "Unexepected error saving animals", http.StatusInternalServerError)
 			return
 		}

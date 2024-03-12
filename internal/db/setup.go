@@ -17,26 +17,26 @@ func SetupDatabase() error {
 		log.Fatal("godotenv.Load(): ", err)
 	}
 
-	db, err := LoadDB()
+	dbm, err := NewDBManager()
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if closeError := db.Close(); closeError != nil {
+		if closeError := dbm.Main.Close(); closeError != nil {
 			fmt.Println("Error closing database", closeError)
 		}
 	}()
 
-	tables, err := getMissingTables(db)
+	tables, err := getMissingTables(dbm.Main)
 	if err != nil {
 		return err
 	}
 
-	if err := createTables(tables, db); err != nil {
+	if err := createTables(tables, dbm.Main); err != nil {
 		return err
 	}
 
-	if err := insertDefaultData(tables, db); err != nil {
+	if err := insertDefaultData(tables, dbm.Main); err != nil {
 		return err
 	}
 

@@ -33,7 +33,7 @@ func UserRouteHandlers(m *mux.AuthMux) {
 			Password: string(passBytes),
 		}
 
-		if err := users.SaveNew(&newUser, m.DB); err != nil {
+		if err := users.SaveNew(&newUser, m.DBM.Main); err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
 		}
@@ -50,7 +50,7 @@ func UserRouteHandlers(m *mux.AuthMux) {
 		username := r.FormValue("username")
 		rawPass := r.FormValue("password")
 
-		user, err := users.GetUserByUsername(username, m.DB)
+		user, err := users.GetUserByUsername(username, m.DBM.Main)
 		if err != nil || user == nil {
 			http.Error(w, "Username or Password incorrect", http.StatusUnauthorized)
 			return
