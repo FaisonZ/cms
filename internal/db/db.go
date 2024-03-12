@@ -16,7 +16,7 @@ type DBManager struct {
 }
 
 func NewDBManager() (*DBManager, error) {
-	main, err := loadDB()
+	main, err := loadDB("main")
 	if err != nil {
 		return nil, err
 	}
@@ -32,18 +32,18 @@ func NewDBManager() (*DBManager, error) {
 // Opens new *sql.DB if not, stores in clients
 // func (dbm *DBManager) ClientDB(int) (*sql.DB, error)
 
-func loadDB() (*sql.DB, error) {
+func loadDB(dbName string) (*sql.DB, error) {
 	db_source := os.Getenv("DB")
 
 	switch db_source {
 	case "local":
-		db, err := loadSQLite()
+		db, err := loadSQLite(dbName)
 		if err != nil {
 			return nil, err
 		}
 		return db, nil
 	case "remote":
-		db, err := loadLibSQL()
+		db, err := loadLibSQL(dbName)
 		if err != nil {
 			return nil, err
 		}
@@ -53,13 +53,13 @@ func loadDB() (*sql.DB, error) {
 	}
 }
 
-func loadSQLite() (*sql.DB, error) {
+func loadSQLite(dbName string) (*sql.DB, error) {
 	err := os.Mkdir("local-db", 0750)
 	if err != nil && !os.IsExist(err) {
 		return nil, fmt.Errorf("cannot create local-db dir: %w", err)
 	}
 
-	fn := filepath.Join("local-db", "local.db")
+	fn := filepath.Join("local-db", "local-"+dbName+".db")
 
 	db, err := sql.Open("sqlite", fn)
 	if err != nil {
@@ -69,7 +69,11 @@ func loadSQLite() (*sql.DB, error) {
 	return db, nil
 }
 
-func loadLibSQL() (*sql.DB, error) {
+func loadLibSQL(dbName string) (*sql.DB, error) {
+	if len(dbName) > 0 {
+		panic("Turso connection not implemented yet!")
+	}
+
 	url := fmt.Sprintf("libsql://%s.turso.io?authToken=%s", os.Getenv("DB_NAME"), os.Getenv("DB_TOKEN"))
 
 	db, err := sql.Open("libsql", url)
