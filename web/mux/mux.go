@@ -61,7 +61,7 @@ func (m *AuthMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (m *AuthMux) ProtectHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
 	m.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Checking auth status...")
-		_, loggedIn := getUserFromContext(r.Context())
+		_, loggedIn := GetUserFromContext(r.Context())
 		if !loggedIn {
 			log.Println("Not authenticated, blocking")
 			http.Redirect(w, r, "/login", http.StatusFound)
@@ -77,7 +77,7 @@ func (m *AuthMux) ProtectHandleFunc(pattern string, handler func(http.ResponseWr
 func (m *AuthMux) NoAuthOnlyHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
 	m.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Checking auth status...")
-		_, loggedIn := getUserFromContext(r.Context())
+		_, loggedIn := GetUserFromContext(r.Context())
 		if loggedIn {
 			log.Println("authenticated, redirecting")
 			http.Redirect(w, r, "/animals", http.StatusFound)
@@ -96,11 +96,11 @@ func (m *AuthMux) ReceiveRouteHandlers(rff RouteHandlersFunc) {
 
 func (m *AuthMux) GetTemplateData(ctx context.Context) TemplateData {
 	var data TemplateData
-	data.User, data.LoggedIn = getUserFromContext(ctx)
+	data.User, data.LoggedIn = GetUserFromContext(ctx)
 	return data
 }
 
-func getUserFromContext(ctx context.Context) (users.User, bool) {
+func GetUserFromContext(ctx context.Context) (users.User, bool) {
 	user, ok := ctx.Value(authUserKey).(users.User)
 
 	// Don't accidentally leak a pass hash through a template

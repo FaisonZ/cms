@@ -4,6 +4,8 @@ import (
 	"html/template"
 	"net/http"
 
+	"faisonz.net/cms/internal/clients"
+	"faisonz.net/cms/internal/db"
 	"faisonz.net/cms/internal/users"
 	"faisonz.net/cms/web/mux"
 	"golang.org/x/crypto/bcrypt"
@@ -19,8 +21,17 @@ func UserRouteHandlers(m *mux.AuthMux) {
 	})
 
 	m.NoAuthOnlyHandleFunc("POST /register", func(w http.ResponseWriter, r *http.Request) {
+		clientName := r.FormValue("clientname")
 		username := r.FormValue("username")
 		rawPass := r.FormValue("password")
+
+		if user, err := users.GetUserByUsername(username, m.DBM.Main); err != nil {
+			http.Error(w, "Oops", http.StatusUnauthorized)
+			return
+		} else if user != nil {
+			http.Error(w, "Username taken", http.StatusUnauthorized)
+			return
+		}
 
 		passBytes, err := bcrypt.GenerateFromPassword([]byte(rawPass), bcrypt.DefaultCost)
 		if err != nil {
@@ -28,9 +39,27 @@ func UserRouteHandlers(m *mux.AuthMux) {
 			return
 		}
 
+		client := &clients.Client{
+			Name:   clientName,
+			Active: true,
+		}
+
+		clientID, err := clients.SaveClient(client, m.DBM.Main)
+		if err != nil {
+			http.Error(w, "Oops", http.StatusInternalServerError)
+			return
+		}
+		client.ID = clientID
+
 		newUser := users.User{
+			ClientID: client.ID,
 			Username: username,
 			Password: string(passBytes),
+		}
+
+		if err := db.SetupClientDB(client.ID, m.DBM); err != nil {
+			http.Error(w, "Oops", http.StatusInternalServerError)
+			return
 		}
 
 		if err := users.SaveNew(&newUser, m.DBM.Main); err != nil {

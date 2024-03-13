@@ -7,13 +7,15 @@ import (
 
 type User struct {
 	ID       int
+	ClientID int
 	Username string
 	Password string
 }
 
 func SaveNew(user *User, db *sql.DB) error {
 	_, err := db.Exec(
-		"INSERT INTO users (username, password) VALUES (?, ?)",
+		"INSERT INTO users (client_id, username, password) VALUES (?, ?, ?)",
+		user.ClientID,
 		user.Username,
 		user.Password,
 	)
@@ -26,7 +28,7 @@ func SaveNew(user *User, db *sql.DB) error {
 }
 
 func GetUserByID(id int, db *sql.DB) (*User, error) {
-	rows, err := db.Query("SELECT id, username, password FROM users WHERE id=?", id)
+	rows, err := db.Query("SELECT id, client_id, username, password FROM users WHERE id=?", id)
 	if err != nil {
 		log.Println("query error")
 		return nil, err
@@ -39,7 +41,7 @@ func GetUserByID(id int, db *sql.DB) (*User, error) {
 		return nil, nil
 	}
 
-	if err := rows.Scan(&user.ID, &user.Username, &user.Password); err != nil {
+	if err := rows.Scan(&user.ID, &user.ClientID, &user.Username, &user.Password); err != nil {
 		return nil, err
 	}
 
@@ -47,7 +49,7 @@ func GetUserByID(id int, db *sql.DB) (*User, error) {
 }
 
 func GetUserByUsername(username string, db *sql.DB) (*User, error) {
-	rows, err := db.Query("SELECT id, username, password FROM users WHERE username=?", username)
+	rows, err := db.Query("SELECT id, client_id, username, password FROM users WHERE username=?", username)
 	if err != nil {
 		log.Println("query error")
 		return nil, err
@@ -60,7 +62,7 @@ func GetUserByUsername(username string, db *sql.DB) (*User, error) {
 		return nil, nil
 	}
 
-	if err := rows.Scan(&user.ID, &user.Username, &user.Password); err != nil {
+	if err := rows.Scan(&user.ID, &user.ClientID, &user.Username, &user.Password); err != nil {
 		return nil, err
 	}
 

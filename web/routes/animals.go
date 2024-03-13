@@ -31,13 +31,20 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 	newAnimalTmpl := template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/animals/new.html"))
 
 	m.ProtectHandleFunc("GET /animals", func(w http.ResponseWriter, r *http.Request) {
-		anmls, err := animals.GetAll(m.DBM.Main)
+		user, _ := mux.GetUserFromContext(r.Context())
+		clientDB, err := m.DBM.ClientDB(user.ClientID)
 		if err != nil {
-			http.Error(w, "Oops", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		anmls, err := animals.GetAll(clientDB)
+		if err != nil {
+			http.Error(w, fmt.Errorf("error getting animals: %w", err).Error(), http.StatusInternalServerError)
 			return
 		}
 		if err := animals.FillTypeForAnimals(anmls, animalTypes); err != nil {
-			http.Error(w, "Oops", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		indexTmpl.Execute(w, animalTemplateData{
@@ -47,13 +54,20 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 	})
 
 	m.ProtectHandleFunc("GET /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
+		user, _ := mux.GetUserFromContext(r.Context())
+		clientDB, err := m.DBM.ClientDB(user.ClientID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
 			Serve404(w, r)
 			return
 		}
 
-		anml, err := animals.Get(int(id), m.DBM.Main)
+		anml, err := animals.Get(int(id), clientDB)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
@@ -75,15 +89,22 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 	})
 
 	m.ProtectHandleFunc("GET /animals/{id}/edit", func(w http.ResponseWriter, r *http.Request) {
+		user, _ := mux.GetUserFromContext(r.Context())
+		clientDB, err := m.DBM.ClientDB(user.ClientID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
 			Serve404(w, r)
 			return
 		}
 
-		anml, err := animals.Get(int(id), m.DBM.Main)
+		anml, err := animals.Get(int(id), clientDB)
 		if err != nil {
-			http.Error(w, "Oops", http.StatusInternalServerError)
+			http.Error(w, fmt.Errorf("error getting animal: %w", err).Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -93,7 +114,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 		}
 
 		if err := animals.FillTypeForAnimal(anml, animalTypes); err != nil {
-			http.Error(w, "Oops", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		editAnimalTmpl.Execute(w, animalTemplateData{
@@ -104,13 +125,20 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 	})
 
 	m.ProtectHandleFunc("POST /animals/{id}", func(w http.ResponseWriter, r *http.Request) {
+		user, _ := mux.GetUserFromContext(r.Context())
+		clientDB, err := m.DBM.ClientDB(user.ClientID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
 			Serve404(w, r)
 			return
 		}
 
-		anml, err := animals.Get(int(id), m.DBM.Main)
+		anml, err := animals.Get(int(id), clientDB)
 		if err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
@@ -123,7 +151,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 
 		anml.Name = r.FormValue("name")
 
-		if err := animals.Update(*anml, m.DBM.Main); err != nil {
+		if err := animals.Update(*anml, clientDB); err != nil {
 			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
 		}
@@ -139,6 +167,13 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 	})
 
 	m.ProtectHandleFunc("POST /animals", func(w http.ResponseWriter, r *http.Request) {
+		user, _ := mux.GetUserFromContext(r.Context())
+		clientDB, err := m.DBM.ClientDB(user.ClientID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		aTypeID, err := strconv.ParseInt(r.FormValue("animalType"), 10, 0)
 		if err != nil {
 			http.Error(w, "Invalid type id", http.StatusBadRequest)
@@ -164,7 +199,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 			AnimalType: animalTypes[typeIndex],
 		}
 
-		if err := animals.SaveMany(animal, int(total), m.DBM.Main); err != nil {
+		if err := animals.SaveMany(animal, int(total), clientDB); err != nil {
 			http.Error(w, "Unexepected error saving animals", http.StatusInternalServerError)
 			return
 		}
