@@ -63,7 +63,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
-			Serve404(w, r)
+			Serve404(m, w, r)
 			return
 		}
 
@@ -74,7 +74,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 		}
 
 		if anml == nil {
-			Serve404(w, r)
+			Serve404(m, w, r)
 			return
 		}
 
@@ -98,7 +98,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
-			Serve404(w, r)
+			Serve404(m, w, r)
 			return
 		}
 
@@ -109,7 +109,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 		}
 
 		if anml == nil {
-			Serve404(w, r)
+			Serve404(m, w, r)
 			return
 		}
 
@@ -134,7 +134,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 0)
 		if err != nil {
-			Serve404(w, r)
+			Serve404(m, w, r)
 			return
 		}
 
@@ -145,7 +145,7 @@ func AnimalRouteHandlers(m *mux.AuthMux) {
 		}
 
 		if anml == nil {
-			Serve404(w, r)
+			Serve404(m, w, r)
 			return
 		}
 

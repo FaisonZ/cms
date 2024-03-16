@@ -41,7 +41,7 @@ func StartServer() {
 		file := r.PathValue("file")
 
 		if !strings.HasSuffix(file, ".css") {
-			routes.Serve404(w, r)
+			routes.Serve404(authMux, w, r)
 			return
 		}
 
@@ -50,7 +50,7 @@ func StartServer() {
 		_, err := os.Stat(fp)
 		if err != nil {
 			fmt.Println(err)
-			routes.Serve404(w, r)
+			routes.Serve404(authMux, w, r)
 			return
 		}
 
@@ -59,10 +59,7 @@ func StartServer() {
 
 	authMux.ReceiveRouteHandlers(routes.UserRouteHandlers)
 	authMux.ReceiveRouteHandlers(routes.AnimalRouteHandlers)
-
-	authMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		routes.Serve404(w, r)
-	})
+	authMux.ReceiveRouteHandlers(routes.ErrorRouteHandlers)
 
 	log.Println("Server started on port 3000")
 
