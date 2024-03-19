@@ -31,6 +31,7 @@ func NewDBManager() (*DBManager, error) {
 // Checks clients for existing open db
 // returns if found
 // Opens new *sql.DB if not, stores in clients
+// Need to RWMutex this
 func (dbm *DBManager) ClientDB(clientID int) (*sql.DB, error) {
 	if clientID < 1 {
 		return nil, errors.New("invalid client id")
